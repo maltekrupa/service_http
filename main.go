@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os/exec"
 	"sort"
-	"strings"
 )
 
 // https://stackoverflow.com/a/37382208
@@ -22,11 +23,27 @@ func GetOutboundIP() net.IP {
 	return localAddr.IP
 }
 
+// https://stackoverflow.com/a/34331660
+func GetFqdn() string {
+	cmd := exec.Command("/bin/hostname", "-f")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Panic(err)
+	}
+	fqdn := out.String()
+	return fqdn[:len(fqdn)-1]
+}
+
 // https://arjanschaaf.github.io/request-headers-webserver-in-go/
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Got request")
-	ip := GetOutboundIP()
-	fmt.Fprintln(w, "Outbound IP: ", ip)
+	oip := GetOutboundIP()
+	fmt.Fprintln(w, "Outbound IP:", oip)
+	fqdn := GetFqdn()
+	fmt.Fprintln(w, "FQDN:", fqdn)
+	fmt.Fprintln(w, "")
 
 	var keys []string
 	for k := range r.Header {
@@ -36,13 +53,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintln(w, "Request Headers: ")
 	for _, k := range keys {
-		key := strings.TrimSpace(k)
-		line := fmt.Sprintf("%q: %q", key, r.Header[k])
+		line := fmt.Sprintf("%s: %s", k, r.Header[k])
 		fmt.Fprintln(w, line)
 	}
 }
 
+func handlerHealth(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "jo")
+}
+
 func main() {
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/health", handlerHealth)
 	http.ListenAndServe(":8080", nil)
 }
