@@ -63,7 +63,9 @@ func handlerHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	fmt.Println("I'm alive!")
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/health", handlerHealth)
+	fmt.Println("Listening on port :8080")
 	http.ListenAndServe(":8080", nil)
 }
